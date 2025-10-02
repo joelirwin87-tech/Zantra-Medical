@@ -1,4 +1,5 @@
 """Billing agent responsible for generating and submitting FHIR claims."""
+
 from __future__ import annotations
 
 import csv
@@ -73,13 +74,13 @@ class HaloFHIRClient:
                 headers=headers,
                 **kwargs,
             )
-        except requests.RequestException as exc:  # pragma: no cover - network failure path
+        except (
+            requests.RequestException
+        ) as exc:  # pragma: no cover - network failure path
             raise HaloFHIRClientError(f"Halo FHIR request failed: {exc}") from exc
 
         if not response.ok:
-            message = (
-                f"Halo FHIR request failed (status={response.status_code}): {response.text}"
-            )
+            message = f"Halo FHIR request failed (status={response.status_code}): {response.text}"
             raise HaloFHIRClientError(message)
 
         if not response.content:
@@ -90,7 +91,9 @@ class HaloFHIRClient:
         except ValueError as exc:  # pragma: no cover - malformed response
             raise HaloFHIRClientError("Halo FHIR response was not valid JSON") from exc
 
-    def get_completed_appointments(self, start: datetime, end: datetime) -> Sequence[Dict]:
+    def get_completed_appointments(
+        self, start: datetime, end: datetime
+    ) -> Sequence[Dict]:
         params = {
             "status": "completed",
             "start": start.isoformat(),
@@ -142,7 +145,9 @@ class BillingAgent:
         with path.open("r", encoding="utf-8") as handle:
             codes = json.load(handle)
         if not isinstance(codes, dict):
-            raise BillingConfigurationError("Billing code file must contain a JSON object")
+            raise BillingConfigurationError(
+                "Billing code file must contain a JSON object"
+            )
         return codes
 
     @staticmethod
@@ -150,7 +155,9 @@ class BillingAgent:
         try:
             normalized = Decimal(str(value)).quantize(Decimal("0.01"))
         except (InvalidOperation, TypeError) as exc:
-            raise BillingConfigurationError(f"Invalid currency amount: {value}") from exc
+            raise BillingConfigurationError(
+                f"Invalid currency amount: {value}"
+            ) from exc
         return normalized
 
     @staticmethod
@@ -159,7 +166,9 @@ class BillingAgent:
         end = datetime.combine(target_date, time.max, tzinfo=timezone.utc)
         return start, end
 
-    def run_daily_billing(self, target_date: Optional[date] = None) -> List[ClaimSubmissionResult]:
+    def run_daily_billing(
+        self, target_date: Optional[date] = None
+    ) -> List[ClaimSubmissionResult]:
         target_date = target_date or date.today()
         start, end = self._appointment_window(target_date)
         LOGGER.info("Fetching completed appointments from %s to %s", start, end)
@@ -199,7 +208,9 @@ class BillingAgent:
             or ""
         )
         if not appointment_id:
-            raise BillingConfigurationError("Appointment is missing a unique identifier")
+            raise BillingConfigurationError(
+                "Appointment is missing a unique identifier"
+            )
         appointment_type = (
             appointment.get("appointmentType")
             or appointment.get("type")
@@ -220,7 +231,9 @@ class BillingAgent:
             appointment.get("chargeAmount", code_info.get("charge_amount", "0"))
         )
 
-        claim_resource = self._build_claim_resource(appointment, code_info, charge_amount)
+        claim_resource = self._build_claim_resource(
+            appointment, code_info, charge_amount
+        )
         submission = self.halo_client.submit_claim(claim_resource)
         claim_id = str(
             submission.get("id")
@@ -266,7 +279,9 @@ class BillingAgent:
         code_info: Dict,
         amount: Decimal,
     ) -> Dict:
-        patient_id = appointment.get("patientId") or appointment.get("patient", {}).get("id")
+        patient_id = appointment.get("patientId") or appointment.get("patient", {}).get(
+            "id"
+        )
         provider_id = appointment.get("practitionerId") or appointment.get("providerId")
         if not patient_id or not provider_id:
             raise BillingConfigurationError(
@@ -274,7 +289,9 @@ class BillingAgent:
             )
 
         encounter_id = appointment.get("encounterId")
-        coverage_id = appointment.get("insurancePlanId") or appointment.get("coverageId")
+        coverage_id = appointment.get("insurancePlanId") or appointment.get(
+            "coverageId"
+        )
         appointment_start = appointment.get("start")
         created_dt = datetime.now(timezone.utc).isoformat()
 
@@ -372,7 +389,11 @@ class BillingAgent:
         if not payload:
             return "unknown", None
 
-        status = payload.get("status") or payload.get("resource", {}).get("status") or "unknown"
+        status = (
+            payload.get("status")
+            or payload.get("resource", {}).get("status")
+            or "unknown"
+        )
         outcome = payload.get("outcome") or payload.get("resource", {}).get("outcome")
 
         reason_messages: List[str] = []

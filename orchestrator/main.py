@@ -1,4 +1,5 @@
 """Central orchestration entry point for Zantra Medical workflows."""
+
 from __future__ import annotations
 
 import argparse
@@ -12,7 +13,9 @@ from datetime import UTC, datetime, time as dtime, timedelta
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional
 
-if __package__ is None or __package__ == "":  # pragma: no cover - runtime safety for script execution
+if (
+    __package__ is None or __package__ == ""
+):  # pragma: no cover - runtime safety for script execution
     sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from orchestrator.agents.appointment import AppointmentAgent
@@ -118,9 +121,14 @@ class DailyTaskScheduler:
         self._stop_event = threading.Event()
 
     def add_daily_task(
-        self, name: str, run_time: dtime, action: Callable[[], Optional[Dict[str, object]]]
+        self,
+        name: str,
+        run_time: dtime,
+        action: Callable[[], Optional[Dict[str, object]]],
     ) -> None:
-        self._tasks.append(ScheduledTask(name=name, time_of_day=run_time, action=action))
+        self._tasks.append(
+            ScheduledTask(name=name, time_of_day=run_time, action=action)
+        )
 
     def start(self) -> None:
         if threading.current_thread() is threading.main_thread():
@@ -148,7 +156,9 @@ class DailyTaskScheduler:
 
 
 def execute_with_logging(
-    task_name: str, action: Callable[[], Optional[Dict[str, object]]], logger: TaskLogger
+    task_name: str,
+    action: Callable[[], Optional[Dict[str, object]]],
+    logger: TaskLogger,
 ) -> Optional[Dict[str, object]]:
     """Run ``action`` while emitting structured log entries."""
 
@@ -223,7 +233,9 @@ def run_scheduler(logger: TaskLogger) -> None:
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Zantra Medical orchestration controller")
+    parser = argparse.ArgumentParser(
+        description="Zantra Medical orchestration controller"
+    )
     parser.add_argument(
         "command",
         nargs="?",

@@ -53,7 +53,9 @@ def book_appointment(
     if not sql_client.is_slot_available(provider_id, appointment_datetime):
         raise ValueError("Requested time slot is unavailable")
 
-    record = sql_client.create_appointment(patient_id, provider_id, appointment_datetime)
+    record = sql_client.create_appointment(
+        patient_id, provider_id, appointment_datetime
+    )
 
     message = (
         f"Appointment confirmed with provider {provider_id} "
@@ -103,4 +105,3 @@ def get_patient_schedule(
         }
         for record in records
     ]
-

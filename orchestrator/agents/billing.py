@@ -1,4 +1,5 @@
 """Billing agent handles claim preparation and submission."""
+
 from __future__ import annotations
 
 from datetime import date

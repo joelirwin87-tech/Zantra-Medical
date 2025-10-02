@@ -12,6 +12,7 @@ The module is designed to be resilient when datasets are missing or partially
 complete. It supports JSON and CSV inputs and provides informative logging to
 help diagnose integration issues.
 """
+
 from __future__ import annotations
 
 import csv
@@ -34,7 +35,9 @@ except ImportError as exc:  # pragma: no cover - defensive guard for missing dep
 
 
 LOGGER = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
 
 
 @dataclass
@@ -118,7 +121,9 @@ def _load_csv(path: Path) -> List[Dict[str, Any]]:
         return [row for row in reader]
 
 
-def load_dataset(dataset_name: str, required_fields: Iterable[str]) -> List[Dict[str, Any]]:
+def load_dataset(
+    dataset_name: str, required_fields: Iterable[str]
+) -> List[Dict[str, Any]]:
     """Load a dataset, filtering out records that do not contain required fields."""
 
     dataset_path = _find_dataset_path(dataset_name)
@@ -142,7 +147,9 @@ def load_dataset(dataset_name: str, required_fields: Iterable[str]) -> List[Dict
         if all(_has_value(record, field) for field in required_fields):
             filtered_records.append(record)
         else:
-            LOGGER.debug("Skipping %s record missing required fields: %s", dataset_name, record)
+            LOGGER.debug(
+                "Skipping %s record missing required fields: %s", dataset_name, record
+            )
     LOGGER.info("Loaded %d %s records", len(filtered_records), dataset_name)
     return filtered_records
 
@@ -156,7 +163,9 @@ def _has_value(record: Dict[str, Any], field: str) -> bool:
     return True
 
 
-def calculate_recall_completion_rate(recalls: Iterable[Dict[str, Any]]) -> tuple[float, int, int]:
+def calculate_recall_completion_rate(
+    recalls: Iterable[Dict[str, Any]],
+) -> tuple[float, int, int]:
     total = 0
     completed = 0
     for recall in recalls:
@@ -182,7 +191,9 @@ def _is_recall_completed(recall: Dict[str, Any]) -> bool:
     return False
 
 
-def calculate_claim_rejection_rate(claims: Iterable[Dict[str, Any]]) -> tuple[float, int, int]:
+def calculate_claim_rejection_rate(
+    claims: Iterable[Dict[str, Any]],
+) -> tuple[float, int, int]:
     total = 0
     rejected = 0
     for claim in claims:
@@ -207,7 +218,9 @@ def _is_claim_rejected(claim: Dict[str, Any]) -> bool:
     return bool(rejection_reason)
 
 
-def calculate_average_wait_time(appointments: Iterable[Dict[str, Any]]) -> tuple[float, int, int]:
+def calculate_average_wait_time(
+    appointments: Iterable[Dict[str, Any]],
+) -> tuple[float, int, int]:
     total_wait_time = 0.0
     counted = 0
     total = 0
@@ -224,11 +237,16 @@ def calculate_average_wait_time(appointments: Iterable[Dict[str, Any]]) -> tuple
 
 
 def _extract_wait_time_minutes(appointment: Dict[str, Any]) -> Optional[float]:
-    if "wait_time_minutes" in appointment and appointment["wait_time_minutes"] not in (None, ""):
+    if "wait_time_minutes" in appointment and appointment["wait_time_minutes"] not in (
+        None,
+        "",
+    ):
         try:
             return float(appointment["wait_time_minutes"])
         except (TypeError, ValueError):
-            LOGGER.debug("Invalid wait_time_minutes value: %s", appointment["wait_time_minutes"])
+            LOGGER.debug(
+                "Invalid wait_time_minutes value: %s", appointment["wait_time_minutes"]
+            )
 
     check_in = appointment.get("check_in_time") or appointment.get("check_in")
     start = (
@@ -282,9 +300,15 @@ def generate_metric_summary() -> MetricSummary:
         required_fields=["id", "patient_id"],
     )
 
-    recall_completion_rate, total_recalls, completed_recalls = calculate_recall_completion_rate(recalls)
-    claim_rejection_rate, total_claims, rejected_claims = calculate_claim_rejection_rate(claims)
-    average_wait_time, total_appointments, counted_wait_times = calculate_average_wait_time(appointments)
+    recall_completion_rate, total_recalls, completed_recalls = (
+        calculate_recall_completion_rate(recalls)
+    )
+    claim_rejection_rate, total_claims, rejected_claims = (
+        calculate_claim_rejection_rate(claims)
+    )
+    average_wait_time, total_appointments, counted_wait_times = (
+        calculate_average_wait_time(appointments)
+    )
 
     LOGGER.info(
         "Computed metrics - Recall completion: %.2f%%, Claim rejection: %.2f%%, Average wait: %.2f minutes",
@@ -306,7 +330,9 @@ def generate_metric_summary() -> MetricSummary:
     )
 
 
-def _current_week_range(reference: Optional[datetime] = None) -> tuple[datetime, datetime]:
+def _current_week_range(
+    reference: Optional[datetime] = None,
+) -> tuple[datetime, datetime]:
     reference = reference or datetime.now()
     start_of_week = reference - timedelta(days=reference.weekday())
     start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -325,10 +351,19 @@ def _draw_header(pdf: canvas.Canvas, title: str, generated_at: datetime) -> None
     pdf.setFont("Helvetica-Bold", 20)
     pdf.drawString(1 * inch, 10.5 * inch, title)
     pdf.setFont("Helvetica", 10)
-    pdf.drawString(1 * inch, 10.1 * inch, f"Generated on: {generated_at.strftime('%Y-%m-%d %H:%M:%S')}")
+    pdf.drawString(
+        1 * inch,
+        10.1 * inch,
+        f"Generated on: {generated_at.strftime('%Y-%m-%d %H:%M:%S')}",
+    )
 
 
-def _draw_metrics(pdf: canvas.Canvas, metrics: MetricSummary, start_of_week: datetime, end_of_week: datetime) -> None:
+def _draw_metrics(
+    pdf: canvas.Canvas,
+    metrics: MetricSummary,
+    start_of_week: datetime,
+    end_of_week: datetime,
+) -> None:
     pdf.setFont("Helvetica-Bold", 12)
     pdf.drawString(1 * inch, 9.5 * inch, "Reporting Period")
     pdf.setFont("Helvetica", 11)
@@ -342,7 +377,11 @@ def _draw_metrics(pdf: canvas.Canvas, metrics: MetricSummary, start_of_week: dat
     pdf.drawString(1 * inch, 8.6 * inch, "Key Metrics")
 
     pdf.setFont("Helvetica", 11)
-    pdf.drawString(1.2 * inch, 8.2 * inch, f"Recall completion rate: {metrics.recall_completion_rate:.2f}%")
+    pdf.drawString(
+        1.2 * inch,
+        8.2 * inch,
+        f"Recall completion rate: {metrics.recall_completion_rate:.2f}%",
+    )
     pdf.drawString(
         1.2 * inch,
         7.9 * inch,
@@ -381,7 +420,9 @@ def _draw_metrics(pdf: canvas.Canvas, metrics: MetricSummary, start_of_week: dat
     )
 
 
-def create_compliance_report(metrics: MetricSummary, start_of_week: datetime, end_of_week: datetime) -> Path:
+def create_compliance_report(
+    metrics: MetricSummary, start_of_week: datetime, end_of_week: datetime
+) -> Path:
     generated_at = datetime.now()
     report_path = _report_filename(start_of_week)
     pdf = canvas.Canvas(str(report_path), pagesize=letter)
