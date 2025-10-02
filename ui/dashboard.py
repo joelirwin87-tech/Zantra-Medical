@@ -6,6 +6,7 @@ JSON files inside the repository. Missing files are tolerated so the
 application can run in environments where the datasets have not yet been
 populated.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime

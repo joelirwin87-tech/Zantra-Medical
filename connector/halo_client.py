@@ -5,6 +5,7 @@ FHIR and SQL interfaces. The clients manage OAuth2 authentication, HTTP
 session handling with retries, and structured error reporting to make it
 safe to integrate with Halo Connect from backend services.
 """
+
 from __future__ import annotations
 
 import logging
@@ -19,7 +20,13 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-__all__ = ["HaloClientError", "HaloAuthError", "HaloAPIError", "HaloFHIRClient", "HaloSQLClient"]
+__all__ = [
+    "HaloClientError",
+    "HaloAuthError",
+    "HaloAPIError",
+    "HaloFHIRClient",
+    "HaloSQLClient",
+]
 
 
 # Configure module-level logging. The default log level can be overridden by the
@@ -33,8 +40,12 @@ DEFAULT_TIMEOUT_SECONDS = 30
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_BACKOFF_FACTOR = 0.5
 
-DEFAULT_TOKEN_URL = os.getenv("HALO_TOKEN_URL", "https://api.haloconnect.com/oauth2/token")
-DEFAULT_FHIR_BASE_URL = os.getenv("HALO_FHIR_BASE_URL", "https://api.haloconnect.com/fhir")
+DEFAULT_TOKEN_URL = os.getenv(
+    "HALO_TOKEN_URL", "https://api.haloconnect.com/oauth2/token"
+)
+DEFAULT_FHIR_BASE_URL = os.getenv(
+    "HALO_FHIR_BASE_URL", "https://api.haloconnect.com/fhir"
+)
 DEFAULT_SQL_BASE_URL = os.getenv("HALO_SQL_BASE_URL", "https://api.haloconnect.com/sql")
 DEFAULT_CLIENT_ID = os.getenv("HALO_CLIENT_ID")
 DEFAULT_CLIENT_SECRET = os.getenv("HALO_CLIENT_SECRET")
@@ -100,11 +111,15 @@ class HaloBaseClient:
         self.timeout = timeout
         self.token_refresh_buffer = token_refresh_buffer
 
-        self._session = self._build_session(max_retries=max_retries, backoff_factor=backoff_factor)
+        self._session = self._build_session(
+            max_retries=max_retries, backoff_factor=backoff_factor
+        )
         self._token_lock = threading.Lock()
         self._token: Optional[TokenData] = None
 
-    def _build_session(self, *, max_retries: int, backoff_factor: float) -> requests.Session:
+    def _build_session(
+        self, *, max_retries: int, backoff_factor: float
+    ) -> requests.Session:
         session = requests.Session()
         retry_strategy = Retry(
             total=max_retries,
@@ -142,14 +157,18 @@ class HaloBaseClient:
                 if self.audience:
                     payload["audience"] = self.audience
 
-                response = self._session.post(self.token_url, data=payload, timeout=self.timeout)
+                response = self._session.post(
+                    self.token_url, data=payload, timeout=self.timeout
+                )
                 response.raise_for_status()
                 data = response.json()
             except requests.RequestException as exc:  # network-level errors
                 logger.error("Failed to obtain Halo Connect token: %s", exc)
                 raise HaloAuthError("Failed to obtain Halo Connect token") from exc
             except ValueError as exc:  # response.json() failure
-                logger.error("Invalid token response received from Halo Connect: %s", exc)
+                logger.error(
+                    "Invalid token response received from Halo Connect: %s", exc
+                )
                 raise HaloAuthError("Invalid token response from Halo Connect") from exc
 
             access_token = data.get("access_token")
@@ -158,19 +177,27 @@ class HaloBaseClient:
                 logger.error("Token response did not include access_token: %s", data)
                 raise HaloAuthError("Token response missing access_token")
             if not expires_in:
-                logger.warning("Token response missing expires_in; defaulting to 5 minutes")
+                logger.warning(
+                    "Token response missing expires_in; defaulting to 5 minutes"
+                )
                 expires_in = 300
 
             try:
                 expires_in_int = int(expires_in)
             except (TypeError, ValueError) as exc:
-                logger.error("Invalid expires_in value in token response: %s", expires_in)
-                raise HaloAuthError("Invalid expires_in value in token response") from exc
+                logger.error(
+                    "Invalid expires_in value in token response: %s", expires_in
+                )
+                raise HaloAuthError(
+                    "Invalid expires_in value in token response"
+                ) from exc
 
             expires_at = datetime.utcnow() + timedelta(seconds=expires_in_int)
             token = TokenData(access_token=access_token, expires_at=expires_at)
             self._token = token
-            logger.info("Halo Connect token refreshed; expires at %s", expires_at.isoformat())
+            logger.info(
+                "Halo Connect token refreshed; expires at %s", expires_at.isoformat()
+            )
             return token.access_token
 
     def _request(
@@ -224,12 +251,18 @@ class HaloBaseClient:
         if "json" in content_type:
             try:
                 parsed = response.json()
-                logger.error("Halo Connect error response: status=%s body=%s", response.status_code, parsed)
+                logger.error(
+                    "Halo Connect error response: status=%s body=%s",
+                    response.status_code,
+                    parsed,
+                )
                 return
             except ValueError:
                 pass
         logger.error(
-            "Halo Connect error response: status=%s body=%s", response.status_code, response.text[:2048]
+            "Halo Connect error response: status=%s body=%s",
+            response.status_code,
+            response.text[:2048],
         )
 
 
@@ -268,7 +301,9 @@ class HaloFHIRClient(HaloBaseClient):
 
         if not patient_id:
             raise ValueError("patient_id must be provided")
-        response = self._request("GET", f"Patient/{patient_id}", headers={"Accept": "application/fhir+json"})
+        response = self._request(
+            "GET", f"Patient/{patient_id}", headers={"Accept": "application/fhir+json"}
+        )
         return response.json()
 
     def get_appointment(self, appointment_id: str) -> Dict[str, Any]:
@@ -283,7 +318,9 @@ class HaloFHIRClient(HaloBaseClient):
         )
         return response.json()
 
-    def search_appointments(self, patient_id: str, **search_params: Any) -> Dict[str, Any]:
+    def search_appointments(
+        self, patient_id: str, **search_params: Any
+    ) -> Dict[str, Any]:
         """Search appointments associated with a patient.
 
         Additional FHIR search parameters can be supplied as keyword arguments.
@@ -354,5 +391,7 @@ class HaloSQLClient(HaloBaseClient):
             raise ValueError("query must be a non-empty string")
 
         payload = {"query": query}
-        response = self._request("POST", "query", json_payload=payload, expected_status=(200, 201))
+        response = self._request(
+            "POST", "query", json_payload=payload, expected_status=(200, 201)
+        )
         return response.json()

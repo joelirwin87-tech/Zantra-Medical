@@ -41,7 +41,10 @@ class HaloSQLClient:
 
     def is_slot_available(self, provider_id: str, scheduled_time: datetime) -> bool:
         for record in self._appointments.values():
-            if record.provider_id == provider_id and record.scheduled_time == scheduled_time:
+            if (
+                record.provider_id == provider_id
+                and record.scheduled_time == scheduled_time
+            ):
                 return False
         return True
 
@@ -67,7 +70,8 @@ class HaloSQLClient:
 
     def get_patient_schedule(self, patient_id: str) -> List[AppointmentRecord]:
         appointments = [
-            record for record in self._appointments.values() if record.patient_id == patient_id
+            record
+            for record in self._appointments.values()
+            if record.patient_id == patient_id
         ]
         return sorted(appointments, key=lambda record: record.scheduled_time)
-

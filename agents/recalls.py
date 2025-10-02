@@ -1,4 +1,5 @@
 """Recall automation agent for notifying patients of upcoming appointments."""
+
 from __future__ import annotations
 
 import json
@@ -14,7 +15,9 @@ logger = logging.getLogger(__name__)
 class HaloSQLClientProtocol(Protocol):
     """Protocol describing the minimal interface required from a SQL client."""
 
-    def fetch_all(self, query: str, params: Optional[Mapping[str, Any]] = None) -> Sequence[Mapping[str, Any]]:
+    def fetch_all(
+        self, query: str, params: Optional[Mapping[str, Any]] = None
+    ) -> Sequence[Mapping[str, Any]]:
         """Run a read-only SQL query and return an iterable of mappings."""
 
     def execute(self, query: str, params: Optional[Mapping[str, Any]] = None) -> None:
@@ -54,8 +57,12 @@ class RecallRecord:
             raise ValueError("Recall row payload is empty")
 
         recall_id = cls._extract_first(row, ("RecallID", "recall_id", "id"))
-        patient_id = cls._extract_first(row, ("PatientID", "patient_id", "patientId", "subject_id"))
-        due_value = cls._extract_first(row, ("Due", "due", "is_due", "due_flag"), allow_missing=False)
+        patient_id = cls._extract_first(
+            row, ("PatientID", "patient_id", "patientId", "subject_id")
+        )
+        due_value = cls._extract_first(
+            row, ("Due", "due", "is_due", "due_flag"), allow_missing=False
+        )
         status = cls._extract_first(row, ("Status", "status"), allow_missing=True)
 
         return cls(
@@ -103,17 +110,27 @@ class RecallProcessingResult:
         }
 
 
-def _run_sql_query(client: HaloSQLClientProtocol, query: str, params: Optional[Mapping[str, Any]] = None) -> Sequence[Mapping[str, Any]]:
+def _run_sql_query(
+    client: HaloSQLClientProtocol,
+    query: str,
+    params: Optional[Mapping[str, Any]] = None,
+) -> Sequence[Mapping[str, Any]]:
     if hasattr(client, "fetch_all"):
         return client.fetch_all(query, params)
     if hasattr(client, "query"):
         return client.query(query, params)
     if hasattr(client, "select"):
         return client.select(query, params)
-    raise AttributeError("HaloSQLClient implementation must provide fetch_all/query/select method")
+    raise AttributeError(
+        "HaloSQLClient implementation must provide fetch_all/query/select method"
+    )
 
 
-def _run_sql_execute(client: HaloSQLClientProtocol, query: str, params: Optional[Mapping[str, Any]] = None) -> None:
+def _run_sql_execute(
+    client: HaloSQLClientProtocol,
+    query: str,
+    params: Optional[Mapping[str, Any]] = None,
+) -> None:
     if hasattr(client, "execute"):
         client.execute(query, params)
         return
@@ -123,10 +140,14 @@ def _run_sql_execute(client: HaloSQLClientProtocol, query: str, params: Optional
     if hasattr(client, "update"):
         client.update(query, params)
         return
-    raise AttributeError("HaloSQLClient implementation must provide execute/run/update method")
+    raise AttributeError(
+        "HaloSQLClient implementation must provide execute/run/update method"
+    )
 
 
-def _get_patient_demographics(client: HaloFHIRClientProtocol, patient_id: str) -> Mapping[str, Any]:
+def _get_patient_demographics(
+    client: HaloFHIRClientProtocol, patient_id: str
+) -> Mapping[str, Any]:
     if hasattr(client, "get_patient"):
         return client.get_patient(patient_id)
     if hasattr(client, "read_patient"):
@@ -135,7 +156,9 @@ def _get_patient_demographics(client: HaloFHIRClientProtocol, patient_id: str) -
         return client.fetch_patient(patient_id)
     if hasattr(client, "retrieve_patient"):
         return client.retrieve_patient(patient_id)
-    raise AttributeError("HaloFHIRClient implementation must expose a patient retrieval method")
+    raise AttributeError(
+        "HaloFHIRClient implementation must expose a patient retrieval method"
+    )
 
 
 def send_reminder(patient: Mapping[str, Any], recall: RecallRecord) -> None:
@@ -145,7 +168,9 @@ def send_reminder(patient: Mapping[str, Any], recall: RecallRecord) -> None:
     For now it simply logs the intention to send a reminder.
     """
 
-    display_name = patient.get("name") or patient.get("fullName") or patient.get("display")
+    display_name = (
+        patient.get("name") or patient.get("fullName") or patient.get("display")
+    )
     logger.info(
         "Sending recall reminder for patient %s (recall_id=%s)",
         display_name or recall.patient_id,
@@ -175,10 +200,16 @@ class RecallAgent:
 
         for recall in recalls:
             if not recall.due:
-                logger.debug("Skipping recall %s because it is not due", recall.recall_id)
+                logger.debug(
+                    "Skipping recall %s because it is not due", recall.recall_id
+                )
                 continue
 
-            logger.debug("Processing recall %s for patient %s", recall.recall_id, recall.patient_id)
+            logger.debug(
+                "Processing recall %s for patient %s",
+                recall.recall_id,
+                recall.patient_id,
+            )
             try:
                 patient = self._fetch_patient_demographics(recall.patient_id)
                 send_reminder(patient, recall)
@@ -233,7 +264,9 @@ class RecallAgent:
             "notified_at": datetime.now(timezone.utc).isoformat(),
         }
         if hasattr(self._sql_client, "update_recall_status"):
-            self._sql_client.update_recall_status(recall.recall_id, params["status"], params["notified_at"])
+            self._sql_client.update_recall_status(
+                recall.recall_id, params["status"], params["notified_at"]
+            )
             return
 
         update_statement = (
@@ -242,14 +275,20 @@ class RecallAgent:
         )
         _run_sql_execute(self._sql_client, update_statement, params)
 
-    def _write_report(self, recalls: Iterable[RecallRecord], results: Iterable[RecallProcessingResult]) -> None:
+    def _write_report(
+        self, recalls: Iterable[RecallRecord], results: Iterable[RecallProcessingResult]
+    ) -> None:
         report_payload = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "total_due": sum(1 for recall in recalls if recall.due),
             "notifications": [result.to_report_entry() for result in results],
         }
-        report_payload["total_notified"] = sum(1 for item in report_payload["notifications"] if item["success"])
-        report_payload["total_failures"] = sum(1 for item in report_payload["notifications"] if not item["success"])
+        report_payload["total_notified"] = sum(
+            1 for item in report_payload["notifications"] if item["success"]
+        )
+        report_payload["total_failures"] = sum(
+            1 for item in report_payload["notifications"] if not item["success"]
+        )
 
         self._report_path.parent.mkdir(parents=True, exist_ok=True)
         with self._report_path.open("w", encoding="utf-8") as handle:

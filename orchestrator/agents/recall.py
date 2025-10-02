@@ -1,4 +1,5 @@
 """Recall agent orchestrates patient recall outreach."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -17,7 +18,9 @@ class RecallAgent:
         """Determine which patients require recall notifications."""
 
         as_of = as_of or date.today()
-        due_records: List[AppointmentRecord] = self._appointment_agent.get_patients_due_for_recall(as_of)
+        due_records: List[AppointmentRecord] = (
+            self._appointment_agent.get_patients_due_for_recall(as_of)
+        )
         recalls: List[Dict[str, str]] = []
         for record in due_records:
             recalls.append(

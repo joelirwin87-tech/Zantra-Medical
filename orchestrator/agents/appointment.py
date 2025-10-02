@@ -1,4 +1,5 @@
 """Appointment agent responsible for appointment data retrieval."""
+
 from __future__ import annotations
 
 import json
@@ -48,7 +49,9 @@ class AppointmentAgent:
             records.append(record)
         return records
 
-    def get_patients_due_for_recall(self, as_of: Optional[date] = None) -> List[AppointmentRecord]:
+    def get_patients_due_for_recall(
+        self, as_of: Optional[date] = None
+    ) -> List[AppointmentRecord]:
         """Return appointments that require recall outreach."""
 
         as_of = as_of or date.today()
