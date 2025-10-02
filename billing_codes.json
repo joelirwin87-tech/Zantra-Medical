@@ -1,0 +1,17 @@
+{
+  "Telehealth Visit": {
+    "procedure_code": "98968",
+    "display": "Telephone evaluation and management service by a physician",
+    "charge_amount": 125.0
+  },
+  "Wellness Exam": {
+    "procedure_code": "99395",
+    "display": "Periodic comprehensive preventive medicine reevaluation",
+    "charge_amount": 160.0
+  },
+  "Behavioral Health": {
+    "procedure_code": "90837",
+    "display": "Psychotherapy, 60 minutes with patient",
+    "charge_amount": 180.0
+  }
+}
